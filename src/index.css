@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    overscroll-behavior: none;
+    scroll-behavior: smooth;
+    background-color: #fbf9f9;
+    color: #1b1c1c;
+  }
+
+  body {
+    min-height: max(884px, 100dvh);
+  }
+
+  /* International Typographic Style (Swiss Style) Typography */
+  h1, h2, h3, h4, h5, h6, .font-display, .font-display-lg, .font-headline {
+    font-family: 'Chivo', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    letter-spacing: -0.025em;
+  }
+
+  /* Tabular lining figures for analytical data & telemetry */
+  table, .tabular-nums, [data-tabular], .stat-value {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Material Symbols Alignment */
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+    line-height: 1;
+    display: inline-block;
+  }
+
+  /* Swiss Minimalist hairline scrollbar */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-container-highest dark:bg-neutral-700 rounded;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer utilities {
+  /* Swiss Planar Division & Structural Surfaces */
+  .swiss-card {
+    background-color: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 0.5rem;
+  }
+
+  .swiss-card-dark {
+    background-color: #171717;
+    border: 1px solid #262626;
+    border-radius: 0.5rem;
+  }
+
+  .swiss-modal {
+    border: 1px solid #0a0a0a;
+    box-shadow: 0 4px 0 0 rgba(0, 0, 0, 0.08);
+  }
+
+  .glass-card {
+    @apply bg-surface-container-lowest/95 dark:bg-neutral-900/95 backdrop-blur-md border border-outline-variant/60 dark:border-neutral-800;
+  }
+
+  .glass-panel {
+    @apply bg-surface/90 dark:bg-neutral-950/90 backdrop-blur-xl border border-outline-variant/50 dark:border-neutral-800;
+  }
+
+  /* Crimson Accents */
+  .crimson-glow {
+    box-shadow: 0 0 20px -3px rgba(223, 37, 49, 0.35);
+  }
+}
+
+/* Swiss Dark Mode Theme Adjustments */
+.dark {
+  --tw-bg-opacity: 1;
+}
+
+.dark body, .dark .bg-background {
+  background-color: #121212;
+  color: #f2f0f0;
+}
+
+.dark .bg-surface {
+  background-color: #171717;
+}
+
+.dark .bg-surface-container-lowest {
+  background-color: #1b1c1c;
+}
+
+.dark .bg-surface-container-low {
+  background-color: #202121;
+}
+
+.dark .bg-surface-container {
+  background-color: #262627;
+}
+
+.dark .bg-surface-container-high {
+  background-color: #2e2f30;
+}
+
+.dark .bg-surface-container-highest {
+  background-color: #38393a;
+}
+
+.dark .text-primary {
+  color: #fbf9f9;
+}
+
+.dark .text-on-surface {
+  color: #f2f0f0;
+}
+
+.dark .text-on-surface-variant {
+  color: #c4c7c8;
+}
+
+.dark .border-outline-variant {
+  border-color: #38393a;
+}
+
+.dark .border-outline-variant\/20,
+.dark .border-outline-variant\/30,
+.dark .border-outline-variant\/40 {
+  border-color: rgba(56, 57, 58, 0.5);
+}
+
+.dark .border-slate-800,
+.dark .border-slate-800\/80 {
+  border-color: #262626;
+}
+
+.dark .bg-slate-950 {
+  background-color: #121212;
+}
+
+.dark .bg-slate-900 {
+  background-color: #171717;
+}
+
+.dark .bg-slate-900\/80,
+.dark .bg-slate-900\/60 {
+  background-color: #1b1c1c;
+}
