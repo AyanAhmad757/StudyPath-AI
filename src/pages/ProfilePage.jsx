@@ -17,13 +17,13 @@ export default function ProfilePage() {
   const { showToast } = useApp();
 
   const [formData, setFormData] = useState({
-    name: profile?.full_name || user?.user_metadata?.full_name || 'Ayan Ahmad',
-    email: user?.email || 'ayan.ahmad@college.edu',
-    college: profile?.college || 'National Institute of Technology',
-    course: profile?.course || 'B.Tech CSE',
-    year: '3rd Year',
-    semester: profile?.semester || '6th Semester',
-    careerGoal: profile?.career_goal || 'Full Stack Developer',
+    name: profile?.full_name || user?.user_metadata?.full_name || '',
+    email: user?.email || '',
+    college: profile?.college || user?.user_metadata?.institution || '',
+    course: profile?.course || user?.user_metadata?.degree || '',
+    year: '1st Year',
+    semester: profile?.semester || '1st Semester',
+    careerGoal: profile?.career_goal || '',
   });
 
   const [saving, setSaving] = useState(false);
@@ -34,8 +34,8 @@ export default function ProfilePage() {
         ...prev,
         name: profile?.full_name || user?.user_metadata?.full_name || prev.name,
         email: user?.email || prev.email,
-        college: profile?.college || prev.college,
-        course: profile?.course || prev.course,
+        college: profile?.college || user?.user_metadata?.institution || prev.college,
+        course: profile?.course || user?.user_metadata?.degree || prev.course,
         semester: profile?.semester || prev.semester,
         careerGoal: profile?.career_goal || prev.careerGoal,
       }));
@@ -76,11 +76,17 @@ export default function ProfilePage() {
         {/* Left Column: Avatar & Summary Card */}
         <Card className="p-6 text-center flex flex-col items-center justify-center space-y-4">
           <div className="relative group">
-            <img
-              src={profile?.avatar_url || user?.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
-              alt={formData.name}
-              className="w-28 h-28 rounded-lg object-cover border border-swiss-border dark:border-[#262626]"
-            />
+            {profile?.avatar_url || user?.user_metadata?.avatar_url ? (
+              <img
+                src={profile?.avatar_url || user?.user_metadata?.avatar_url}
+                alt={formData.name || 'User'}
+                className="w-28 h-28 rounded-lg object-cover border border-swiss-border dark:border-[#262626]"
+              />
+            ) : (
+              <div className="w-28 h-28 rounded-lg bg-[#0a0a0a] dark:bg-white text-white dark:text-[#0a0a0a] flex items-center justify-center font-headline text-3xl font-bold border border-swiss-border dark:border-[#262626]">
+                {(formData.name || user?.email || 'S')[0]?.toUpperCase()}
+              </div>
+            )}
             <button
               type="button"
               onClick={() => showToast('Avatar upload ready to connect to storage API', 'info')}

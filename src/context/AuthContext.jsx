@@ -9,60 +9,36 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize auth session and listen to changes
+  // Initialize auth session and listen to live Supabase changes
   useEffect(() => {
     let mounted = true;
 
     async function initAuth() {
       try {
-        const { session: currentSession } = await authService.getSession();
+        const { session: currentSession, error } = await authService.getSession();
         if (mounted) {
+          if (error) {
+            console.warn('[AuthContext] Session retrieval notice:', error.message);
+          }
+
           if (currentSession?.user) {
             setSession(currentSession);
             setUser(currentSession.user);
             const userProf = await authService.getProfile(currentSession.user.id);
-            setProfile(userProf);
+            if (mounted) setProfile(userProf);
           } else {
-            // Automatically establish genuine session using demo account if unauthenticated
-            try {
-              const { data: demoAuth } = await authService.signIn('ayan.ahmad@college.edu', 'password123');
-              if (demoAuth?.session?.user && mounted) {
-                setSession(demoAuth.session);
-                setUser(demoAuth.session.user);
-                const userProf = await authService.getProfile(demoAuth.session.user.id);
-                setProfile(userProf);
-                return;
-              }
-            } catch (_) {}
-
-            // Fallback mock profile if offline
-            const defaultDemoUser = {
-              id: 'demo-student-1',
-              email: 'ayan.ahmad@college.edu',
-              user_metadata: {
-                full_name: 'Ayan Ahmad',
-                college: 'National Institute of Technology',
-                course: 'B.Tech CSE',
-                semester: '6th Semester',
-                career_goal: 'Full Stack Developer',
-                avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-              },
-            };
-            setSession({ user: defaultDemoUser });
-            setUser(defaultDemoUser);
-            setProfile({
-              id: defaultDemoUser.id,
-              full_name: defaultDemoUser.user_metadata.full_name,
-              college: defaultDemoUser.user_metadata.college,
-              course: defaultDemoUser.user_metadata.course,
-              semester: defaultDemoUser.user_metadata.semester,
-              career_goal: defaultDemoUser.user_metadata.career_goal,
-              avatar_url: defaultDemoUser.user_metadata.avatar_url,
-            });
+            setSession(null);
+            setUser(null);
+            setProfile(null);
           }
         }
       } catch (err) {
-        console.error('Error initializing auth:', err);
+        console.error('[AuthContext] Error initializing auth:', err);
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -70,16 +46,18 @@ export function AuthProvider({ children }) {
 
     initAuth();
 
-    const { data: { subscription } } = authService.onAuthStateChange(async (_event, newSession) => {
+    // Listen to real Supabase auth state transitions
+    const { data: { subscription } } = authService.onAuthStateChange(async (event, newSession) => {
       if (!mounted) return;
-      setSession(newSession);
+
+      setSession(newSession || null);
       setUser(newSession?.user || null);
 
       if (newSession?.user) {
         const userProf = await authService.getProfile(newSession.user.id);
-        setProfile(userProf);
+        if (mounted) setProfile(userProf);
       } else {
-        setProfile(null);
+        if (mounted) setProfile(null);
       }
       setLoading(false);
     });
@@ -90,66 +68,117 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  /**
+   * Real Supabase sign in
+   */
+  /**
+   * Real Supabase sign in
+   */
   const signIn = async (email, password) => {
-    setLoading(true);
     try {
       const { data, error } = await authService.signIn(email, password);
-      if (error) throw error;
+      if (error) {
+        return {
+          success: false,
+          error: error.message || 'Authentication failed',
+          code: error.code || null,
+          status: error.status || null,
+        };
+      }
 
       if (data?.user) {
         setUser(data.user);
         setSession(data.session);
-        const userProf = await authService.getProfile(data.user.id);
-        setProfile(userProf);
+        // Fetch profile asynchronously without delaying login redirect
+        authService.getProfile(data.user.id).then((userProf) => {
+          if (userProf) setProfile(userProf);
+        }).catch(() => {});
       }
-      return { success: true };
+      return { success: true, user: data?.user, session: data?.session };
     } catch (err) {
-      return { success: false, error: err.message || 'Authentication failed' };
-    } finally {
-      setLoading(false);
+      return {
+        success: false,
+        error: err.message || 'Authentication failed',
+        code: err.code || null,
+        status: err.status || null,
+      };
     }
   };
 
+  /**
+   * Real Supabase user registration
+   */
   const signUp = async (userData) => {
-    setLoading(true);
     try {
       const email = userData.email;
       const password = userData.password;
       const metadata = {
-        fullName: userData.fullName || userData.full_name,
-        college: userData.college,
-        course: userData.course,
-        semester: userData.semester,
-        careerGoal: userData.careerGoal || userData.career_goal,
+        fullName: userData.fullName || userData.full_name || '',
+        college: userData.college || '',
+        course: userData.course || '',
+        semester: userData.semester || '',
+        careerGoal: userData.careerGoal || userData.career_goal || '',
       };
 
       const { data, error } = await authService.signUp(email, password, metadata);
-      if (error) throw error;
+      if (error) {
+        return {
+          success: false,
+          error: error.message || 'Registration failed',
+          code: error.code || null,
+        };
+      }
 
-      if (data?.user) {
+      // If email confirmation is disabled, session is returned immediately
+      if (data?.session && data?.user) {
         setUser(data.user);
         setSession(data.session);
-        const userProf = await authService.getProfile(data.user.id);
-        setProfile(userProf);
+        authService.getProfile(data.user.id).then((userProf) => {
+          if (userProf) setProfile(userProf);
+        }).catch(() => {});
+        return { success: true, needsEmailConfirmation: false };
       }
-      return { success: true };
+
+      // If email confirmation is enabled, user is created but session is null
+      return {
+        success: true,
+        needsEmailConfirmation: Boolean(data?.user && !data?.session),
+      };
     } catch (err) {
-      return { success: false, error: err.message || 'Registration failed' };
-    } finally {
-      setLoading(false);
+      return {
+        success: false,
+        error: err.message || 'Registration failed',
+        code: err.code || null,
+      };
     }
   };
 
+  /**
+   * Real Supabase sign out
+   */
   const signOut = async () => {
-    setLoading(true);
     try {
       await authService.signOut();
       setUser(null);
       setSession(null);
       setProfile(null);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error('[AuthContext.signOut] Error:', err);
     }
+  };
+
+  /**
+   * Send password reset email
+   */
+  const resetPassword = async (email) => {
+    return await authService.resetPassword(email);
+  };
+
+  /**
+   * Resend signup email confirmation
+   */
+  const resendConfirmationEmail = async (email) => {
+    return await authService.resendConfirmationEmail(email);
   };
 
   const refreshProfile = async () => {
@@ -179,11 +208,13 @@ export function AuthProvider({ children }) {
         isAuthenticated: Boolean(user),
         loading,
         signIn,
-        login: signIn, // alias
+        login: signIn,
         signUp,
-        signup: signUp, // alias
+        signup: signUp,
         signOut,
-        logout: signOut, // alias
+        logout: signOut,
+        resetPassword,
+        resendConfirmationEmail,
         refreshProfile,
         updateProfile,
       }}

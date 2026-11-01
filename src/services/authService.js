@@ -1,97 +1,108 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 
-const MOCK_STORAGE_KEY = 'friday_auth_user';
-
+/**
+ * Authentication Service for StudyPath AI
+ * 
+ * Interacts directly with Supabase Auth:
+ * - signUp (with user metadata and profile row creation)
+ * - signInWithPassword
+ * - signOut
+ * - getSession & getUser
+ * - resetPasswordForEmail
+ * - public.profiles query & updates
+ * 
+ * Strictly uses real Supabase Auth. No mock sessions or hardcoded credentials.
+ */
 export const authService = {
   /**
-   * Sign up with email, password, and student metadata
+   * Register a new user with email, password, and metadata
    */
   async signUp(email, password, metadata = {}) {
-    if (!isSupabaseConfigured()) {
-      // Mock Fallback
-      const mockUser = {
-        id: 'mock-user-' + Date.now(),
-        email,
-        user_metadata: {
-          full_name: metadata.fullName || metadata.full_name || 'Ayan Ahmad',
-          college: metadata.college || 'National Institute of Technology',
-          course: metadata.course || 'B.Tech CSE',
-          semester: metadata.semester || '6th Semester',
-          career_goal: metadata.careerGoal || metadata.career_goal || 'Full Stack Developer',
-        },
+    if (!isSupabaseConfigured() || !supabase) {
+      return {
+        data: null,
+        error: new Error('Supabase is not configured. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.'),
       };
-      localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(mockUser));
-      return { data: { user: mockUser, session: { user: mockUser } }, error: null };
     }
 
     try {
+      const trimmedEmail = (email || '').trim().toLowerCase();
+      const fullName = (metadata.fullName || metadata.full_name || '').trim();
+
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: trimmedEmail,
         password,
         options: {
           data: {
-            full_name: metadata.fullName || metadata.full_name || '',
-            college: metadata.college || 'National Institute of Technology',
-            course: metadata.course || 'B.Tech CSE',
-            semester: metadata.semester || '6th Semester',
-            career_goal: metadata.careerGoal || metadata.career_goal || 'Full Stack Developer',
-            avatar_url: metadata.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+            full_name: fullName,
+            college: metadata.college || '',
+            course: metadata.course || '',
+            semester: metadata.semester || '',
+            career_goal: metadata.careerGoal || metadata.career_goal || '',
           },
         },
       });
 
       if (error) throw error;
+
+      // Ensure profile row exists in public.profiles if user was created
+      if (data?.user?.id) {
+        try {
+          await supabase.from('profiles').upsert(
+            {
+              id: data.user.id,
+              full_name: fullName || trimmedEmail.split('@')[0],
+              college: metadata.college || null,
+              course: metadata.course || null,
+              semester: metadata.semester || null,
+              career_goal: metadata.careerGoal || metadata.career_goal || null,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'id' }
+          );
+        } catch (profileErr) {
+          console.warn('[authService.signUp] Profile upsert notice:', profileErr.message);
+        }
+      }
+
       return { data, error: null };
     } catch (error) {
-      console.error('Error signing up:', error.message);
+      console.error('[authService.signUp] Error:', error.message);
       return { data: null, error };
     }
   },
 
   /**
-   * Sign in with email and password
+   * Sign in with registered email and password
    */
   async signIn(email, password) {
-    if (!isSupabaseConfigured()) {
-      // Mock Fallback
-      const existing = localStorage.getItem(MOCK_STORAGE_KEY);
-      const mockUser = existing
-        ? JSON.parse(existing)
-        : {
-            id: 'mock-user-1',
-            email,
-            user_metadata: {
-              full_name: 'Ayan Ahmad',
-              college: 'National Institute of Technology',
-              course: 'B.Tech CSE',
-              semester: '6th Semester',
-              career_goal: 'Full Stack Developer',
-            },
-          };
-      localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(mockUser));
-      return { data: { user: mockUser, session: { user: mockUser } }, error: null };
+    if (!isSupabaseConfigured() || !supabase) {
+      return {
+        data: null,
+        error: new Error('Supabase is not configured. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.'),
+      };
     }
 
     try {
+      const trimmedEmail = (email || '').trim().toLowerCase();
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: trimmedEmail,
         password,
       });
 
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error signing in:', error.message);
+      console.error('[authService.signIn] Error:', error.message);
       return { data: null, error };
     }
   },
 
   /**
-   * Sign out current user
+   * Terminate current Supabase session
    */
   async signOut() {
-    if (!isSupabaseConfigured()) {
-      localStorage.removeItem(MOCK_STORAGE_KEY);
+    if (!isSupabaseConfigured() || !supabase) {
       return { error: null };
     }
 
@@ -100,71 +111,52 @@ export const authService = {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('Error signing out:', error.message);
+      console.error('[authService.signOut] Error:', error.message);
       return { error };
     }
   },
 
   /**
-   * Get current authenticated session
+   * Retrieve current Supabase session
    */
   async getSession() {
-    if (!isSupabaseConfigured()) {
-      const existing = localStorage.getItem(MOCK_STORAGE_KEY);
-      if (existing) {
-        const user = JSON.parse(existing);
-        return { session: { user }, error: null };
-      }
+    if (!isSupabaseConfigured() || !supabase) {
       return { session: null, error: null };
     }
 
     try {
       const { data, error } = await supabase.auth.getSession();
       if (error) throw error;
-      return { session: data.session, error: null };
+      return { session: data?.session || null, error: null };
     } catch (error) {
-      console.error('Error getting session:', error.message);
+      console.error('[authService.getSession] Error:', error.message);
       return { session: null, error };
     }
   },
 
   /**
-   * Get current authenticated user
+   * Retrieve current authenticated user record
    */
   async getCurrentUser() {
-    if (!isSupabaseConfigured()) {
-      const existing = localStorage.getItem(MOCK_STORAGE_KEY);
-      return existing ? JSON.parse(existing) : null;
+    if (!isSupabaseConfigured() || !supabase) {
+      return null;
     }
 
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error) throw error;
-      return user;
+      return user || null;
     } catch (error) {
-      console.error('Error getting current user:', error.message);
+      console.error('[authService.getCurrentUser] Error:', error.message);
       return null;
     }
   },
 
   /**
-   * Fetch profile record from public.profiles
+   * Fetch user profile from public.profiles
    */
   async getProfile(userId) {
-    if (!isSupabaseConfigured()) {
-      const existing = localStorage.getItem(MOCK_STORAGE_KEY);
-      if (existing) {
-        const u = JSON.parse(existing);
-        return {
-          id: u.id,
-          full_name: u.user_metadata?.full_name || 'Ayan Ahmad',
-          college: u.user_metadata?.college || 'National Institute of Technology',
-          course: u.user_metadata?.course || 'B.Tech CSE',
-          semester: u.user_metadata?.semester || '6th Semester',
-          career_goal: u.user_metadata?.career_goal || 'Full Stack Developer',
-          avatar_url: u.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-        };
-      }
+    if (!userId || !isSupabaseConfigured() || !supabase) {
       return null;
     }
 
@@ -173,75 +165,141 @@ export const authService = {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        // If profile row doesn't exist yet, return metadata fallback
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          return {
-            id: user.id,
-            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Student',
-            college: user.user_metadata?.college || 'National Institute of Technology',
-            course: user.user_metadata?.course || 'B.Tech CSE',
-            semester: user.user_metadata?.semester || '6th Semester',
-            career_goal: user.user_metadata?.career_goal || 'Full Stack Developer',
-            avatar_url: user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-          };
-        }
-        return null;
+        console.warn('[authService.getProfile] Database query note:', error.message);
       }
-      return data;
+
+      if (data) {
+        return data;
+      }
+
+      // If no row exists yet in public.profiles, construct from user metadata and save
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && user.id === userId) {
+        const fallbackProfile = {
+          id: user.id,
+          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Student',
+          college: user.user_metadata?.college || '',
+          course: user.user_metadata?.course || '',
+          semester: user.user_metadata?.semester || '',
+          career_goal: user.user_metadata?.career_goal || '',
+          avatar_url: user.user_metadata?.avatar_url || '',
+          updated_at: new Date().toISOString(),
+        };
+
+        try {
+          await supabase.from('profiles').upsert(fallbackProfile, { onConflict: 'id' });
+        } catch (_) {}
+
+        return fallbackProfile;
+      }
+
+      return null;
     } catch (error) {
-      console.error('Error fetching profile:', error.message);
+      console.error('[authService.getProfile] Error:', error.message);
       return null;
     }
   },
 
   /**
-   * Update student profile in public.profiles
+   * Update student profile fields in public.profiles
    */
   async updateProfile(userId, profileData) {
-    if (!isSupabaseConfigured()) {
-      const existing = localStorage.getItem(MOCK_STORAGE_KEY);
-      if (existing) {
-        const u = JSON.parse(existing);
-        u.user_metadata = { ...u.user_metadata, ...profileData };
-        localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(u));
-      }
-      return { data: profileData, error: null };
+    if (!userId || !isSupabaseConfigured() || !supabase) {
+      return {
+        data: null,
+        error: new Error('Cannot update profile: Supabase is not configured or user is unauthenticated.'),
+      };
     }
 
     try {
       const payload = {
-        full_name: profileData.full_name || profileData.name,
-        college: profileData.college,
-        course: profileData.course,
-        semester: profileData.semester,
-        career_goal: profileData.career_goal || profileData.careerGoal,
-        avatar_url: profileData.avatar_url || profileData.avatar,
+        id: userId,
+        full_name: profileData.full_name || profileData.name || '',
+        college: profileData.college || '',
+        course: profileData.course || '',
+        semester: profileData.semester || '',
+        career_goal: profileData.career_goal || profileData.careerGoal || '',
+        avatar_url: profileData.avatar_url || profileData.avatar || '',
         updated_at: new Date().toISOString(),
       };
 
       const { data, error } = await supabase
         .from('profiles')
-        .upsert({ id: userId, ...payload })
+        .upsert(payload, { onConflict: 'id' })
         .select()
         .single();
 
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('Error updating profile:', error.message);
+      console.error('[authService.updateProfile] Error:', error.message);
       return { data: null, error };
     }
   },
 
   /**
-   * Listen to auth state changes
+   * Send password reset email via Supabase Auth
+   */
+  async resetPassword(email) {
+    if (!isSupabaseConfigured() || !supabase) {
+      return {
+        data: null,
+        error: new Error('Supabase is not configured.'),
+      };
+    }
+
+    try {
+      const trimmedEmail = (email || '').trim().toLowerCase();
+      const redirectUrl = `${window.location.origin}/login`;
+      const { data, error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo: redirectUrl,
+      });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('[authService.resetPassword] Error:', error.message);
+      return { data: null, error };
+    }
+  },
+
+  /**
+   * Resend signup email confirmation link
+   */
+  async resendConfirmationEmail(email) {
+    if (!isSupabaseConfigured() || !supabase) {
+      return {
+        data: null,
+        error: new Error('Supabase is not configured.'),
+      };
+    }
+
+    try {
+      const trimmedEmail = (email || '').trim().toLowerCase();
+      const { data, error } = await supabase.auth.resend({
+        type: 'signup',
+        email: trimmedEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('[authService.resendConfirmationEmail] Error:', error.message);
+      return { data: null, error };
+    }
+  },
+
+  /**
+   * Listen to active auth state changes
    */
   onAuthStateChange(callback) {
-    if (!isSupabaseConfigured()) {
+    if (!isSupabaseConfigured() || !supabase) {
       return { data: { subscription: { unsubscribe: () => {} } } };
     }
     return supabase.auth.onAuthStateChange(callback);

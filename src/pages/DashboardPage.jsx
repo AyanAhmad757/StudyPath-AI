@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
 
   const [courses, setCourses] = useState([]);
@@ -26,7 +26,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [quickTopic, setQuickTopic] = useState('');
 
-  const displayName = user?.name ? user.name.split(' ')[0] : 'Student';
+  const fullName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Student';
+  const displayName = fullName.split(' ')[0];
 
   useEffect(() => {
     async function loadDashboardData() {

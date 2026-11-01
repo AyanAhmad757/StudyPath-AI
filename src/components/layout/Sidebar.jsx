@@ -16,7 +16,12 @@ import {
 } from 'lucide-react';
 
 export default function Sidebar({ isCollapsed, setIsCollapsed }) {
-  const { user, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
+
+  const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Student';
+  const displayEmail = user?.email || 'Logged in';
+  const initial = displayName[0]?.toUpperCase() || 'S';
+  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
 
   const mainNav = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -139,15 +144,23 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         {!isCollapsed ? (
           <div className="p-2.5 rounded-lg bg-white dark:bg-[#1a1a1a] border border-[#e5e5e5] dark:border-[#2a2a2a] flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-md bg-[#0a0a0a] dark:bg-white text-white dark:text-[#0a0a0a] font-bold text-xs flex items-center justify-center shrink-0">
-                {(user?.name || 'S')[0].toUpperCase()}
-              </div>
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="w-7 h-7 rounded-md object-cover shrink-0"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-md bg-[#0a0a0a] dark:bg-white text-white dark:text-[#0a0a0a] font-bold text-xs flex items-center justify-center shrink-0">
+                  {initial}
+                </div>
+              )}
               <div className="truncate">
                 <p className="text-xs font-bold text-[#0a0a0a] dark:text-white truncate font-headline">
-                  {user?.name || 'Student User'}
+                  {displayName}
                 </p>
                 <p className="text-[10px] text-[#737373] truncate">
-                  {user?.email || 'Logged in'}
+                  {displayEmail}
                 </p>
               </div>
             </div>

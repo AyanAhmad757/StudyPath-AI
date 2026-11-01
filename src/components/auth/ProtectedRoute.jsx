@@ -8,14 +8,12 @@ export default function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-surface text-on-surface">
-        <div className="w-12 h-12 rounded-2xl bg-secondary-fixed/50 text-primary flex items-center justify-center animate-pulse mb-4">
-          <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-            auto_awesome
-          </span>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-[#121212] text-swiss-black dark:text-white p-6">
+        <div className="w-10 h-10 rounded-lg bg-[#fef2f2] dark:bg-crimson/15 text-crimson flex items-center justify-center mb-3 border border-crimson/20">
+          <div className="w-5 h-5 border-2 border-crimson border-t-transparent rounded-full animate-spin" />
         </div>
-        <p className="text-xs font-headline font-bold uppercase tracking-widest text-primary">
-          Loading Friday AI...
+        <p className="text-xs font-mono font-bold uppercase tracking-widest text-swiss-muted dark:text-[#a3a3a3]">
+          Authenticating Session...
         </p>
       </div>
     );

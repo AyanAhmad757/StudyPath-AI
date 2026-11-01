@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export default function Navbar({ onOpenMobileMenu }) {
-  const { user, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
   const { isDarkMode, toggleDarkMode, notifications, setIsSearchOpen } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
@@ -26,6 +26,12 @@ export default function Navbar({ onOpenMobileMenu }) {
   const userMenuRef = useRef(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Student';
+  const displayEmail = user?.email || '';
+  const displayCourse = profile?.course || user?.user_metadata?.course || 'Enrolled Student';
+  const initial = displayName[0]?.toUpperCase() || 'S';
+  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -115,20 +121,26 @@ export default function Navbar({ onOpenMobileMenu }) {
               className="flex items-center justify-center w-9 h-9 rounded-full p-0.5 hover:opacity-90 transition-opacity border border-[#e5e5e5] dark:border-neutral-700"
               aria-label="User Profile"
             >
-              <img
-                src={user?.avatar || 'https://lh3.googleusercontent.com/aida/AEtjO1UMkVA_lFpavUtEhT8G6CSxoAMAyDt6vmjniKFNMWrkYP00yS7bia2FPArVlDxJqui48r7tKAfTRL53ibxwOSMojFaNRhNr7TdNFqyIS5UTnC3pdwQQ_YLFTaphyxwVK0dS9yj49Sm7sQ0KYuzcUoo6O7W-l-5bpbO_crZwI2c4jWWxrEmwtVjyKeHv_vBQudt5-67CPuXw14NQDnr-H0Y7MZ3p7ipdTZD8WLo58V7f27tydShDjj4d1W0'}
-                alt="Profile"
-                className="w-7 h-7 rounded-full object-cover"
-              />
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="w-7 h-7 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-[#0a0a0a] dark:bg-white text-white dark:text-[#0a0a0a] text-xs font-bold font-headline flex items-center justify-center">
+                  {initial}
+                </div>
+              )}
             </button>
 
             {isUserMenuOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#171717] rounded-lg shadow-[0_4px_0_rgba(0,0,0,0.08)] border border-[#0a0a0a] dark:border-neutral-700 z-50 overflow-hidden py-1.5 animate-slide-down">
                 <div className="px-4 py-3 border-b border-[#e5e5e5] dark:border-neutral-800">
-                  <p className="font-headline text-xs font-bold text-[#0a0a0a] dark:text-white truncate">{user?.name || 'Ayan Mukherjee'}</p>
-                  <p className="text-[11px] text-[#737373] truncate">{user?.email}</p>
+                  <p className="font-headline text-xs font-bold text-[#0a0a0a] dark:text-white truncate">{displayName}</p>
+                  <p className="text-[11px] text-[#737373] truncate">{displayEmail}</p>
                   <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded bg-[#f4f4f4] dark:bg-neutral-800 text-[#171717] dark:text-neutral-200">
-                    {user?.course || 'B.Tech CSE'}
+                    {displayCourse}
                   </span>
                 </div>
 

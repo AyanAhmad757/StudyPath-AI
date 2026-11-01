@@ -11,10 +11,16 @@ import {
   Settings,
   Library,
   GraduationCap,
+  LogOut,
 } from 'lucide-react';
 
 export default function MobileSidebar({ isOpen, onClose }) {
-  const { user } = useAuth();
+  const { user, profile, logout } = useAuth();
+
+  const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Student';
+  const displayEmail = user?.email || 'Logged in';
+  const initial = displayName[0]?.toUpperCase() || 'S';
+  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
 
   useEffect(() => {
     if (isOpen) {
@@ -66,12 +72,20 @@ export default function MobileSidebar({ isOpen, onClose }) {
         {/* Student Profile Snippet */}
         <div className="px-4 py-3 mx-3 bg-[#fafafa] dark:bg-[#1a1a1a] rounded-lg my-3 border border-[#e5e5e5] dark:border-[#2a2a2a]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-md bg-[#0a0a0a] dark:bg-white text-white dark:text-[#0a0a0a] font-bold text-xs flex items-center justify-center shrink-0">
-              {(user?.name || 'S')[0].toUpperCase()}
-            </div>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={displayName}
+                className="w-8 h-8 rounded-md object-cover shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-md bg-[#0a0a0a] dark:bg-white text-white dark:text-[#0a0a0a] font-bold text-xs flex items-center justify-center shrink-0">
+                {initial}
+              </div>
+            )}
             <div className="min-w-0">
-              <p className="text-[#0a0a0a] dark:text-white text-xs font-bold font-headline truncate">{user?.name || 'Student'}</p>
-              <p className="text-[11px] text-[#737373] truncate">{user?.email || 'Logged in'}</p>
+              <p className="text-[#0a0a0a] dark:text-white text-xs font-bold font-headline truncate">{displayName}</p>
+              <p className="text-[11px] text-[#737373] truncate">{displayEmail}</p>
             </div>
           </div>
         </div>
@@ -140,6 +154,19 @@ export default function MobileSidebar({ isOpen, onClose }) {
             <User className="w-4 h-4 text-[#737373] shrink-0" />
             <span>Profile</span>
           </NavLink>
+
+          <div className="pt-3 mt-2 border-t border-[#e5e5e5] dark:border-[#262626]">
+            <button
+              onClick={() => {
+                onClose();
+                logout();
+              }}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-error hover:bg-error-container/30 transition-colors"
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
       </div>
 
